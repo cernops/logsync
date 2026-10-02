@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+declare -A matches=()
+
+for proc in /proc/[0-9]*; do
+    [[ -r "$proc/comm" && -r "$proc/cmdline" ]] || continue
+    pid=${proc##*/}
+    read -r comm < "$proc/comm" || continue
+    cmdline=$(tr '\0' ' ' < "$proc/cmdline")
+    if [[ "$comm" == "logsync" || ( "$comm" == python* && "$cmdline" == *logsync.cli* ) ]]; then
+        matches["$pid"]=$cmdline
+    fi
+done
+
+if (( ${#matches[@]} != 1 )); then
+    printf 'Expected exactly one logsync process, found %d:\n' "${#matches[@]}" >&2
+    for pid in "${!matches[@]}"; do
+        printf '  %s  %s\n' "$pid" "${matches[$pid]}" >&2
+    done
+    exit 1
+fi
+
+for pid in "${!matches[@]}"; do
+    :
+done
+proc=/proc/$pid
+
+section() {
+    printf '\n== %s ==\n' "$1"
+}
+
+show_file() {
+    local label=$1
+    local path=$2
+    printf '%-12s ' "$label"
+    if [[ -r "$path" ]]; then
+        cat "$path"
+    else
+        printf '<unavailable>\n'
+    fi
+}
+
+section "Process"
+printf 'PID          %s\n' "$pid"
+printf 'Command      %s\n' "${matches[$pid]}"
+printf 'Executable   %s\n' "$(readlink "$proc/exe" 2>/dev/null || printf '<unavailable>')"
+printf 'Working dir  %s\n' "$(readlink "$proc/cwd" 2>/dev/null || printf '<unavailable>')"
+
+section "Process credentials"
+printf 'Uid/Gid columns: real effective saved filesystem\n'
+grep -E '^(Name|Pid|PPid|Uid|Gid|Groups|Cap(Inh|Prm|Eff|Bnd|Amb)|NoNewPrivs|Seccomp):' \
+    "$proc/status" || true
+
+section "Thread credentials"
+for status in "$proc"/task/*/status; do
+    [[ -r "$status" ]] || continue
+    printf -- '-- TID %s --\n' "$(basename "$(dirname "$status")")"
+    grep -E '^(Pid|Uid|Gid|Groups):' "$status" || true
+done
+
+section "Identity mappings and security"
+show_file "uid_map" "$proc/uid_map"
+show_file "gid_map" "$proc/gid_map"
+show_file "setgroups" "$proc/setgroups"
+show_file "loginuid" "$proc/loginuid"
+show_file "LSM context" "$proc/attr/current"
+
+section "Namespaces"
+for namespace in user pid mnt; do
+    printf '%-12s %s\n' "$namespace" \
+        "$(readlink "$proc/ns/$namespace" 2>/dev/null || printf '<unavailable>')"
+done
+
+if command -v ps >/dev/null; then
+    section "ps summary"
+    ps -o pid,ppid,user,uid,ruser,ruid,group,gid,rgroup,rgid,supgid,supgrp,args -p "$pid"
+fi
+
+if command -v capsh >/dev/null; then
+    cap_eff=$(awk '/^CapEff:/ {print $2}' "$proc/status")
+    section "Effective capabilities"
+    capsh --decode="$cap_eff"
+fi
+
+if command -v keyctl >/dev/null; then
+    section "Keyrings visible to this inspecting shell"
+    printf '%s\n' 'The target process session keyring is not exposed by /proc.'
+    keyctl show @s 2>&1 || true
+    keyctl show @u 2>&1 || true
+fi
+
+section "Transient effective identity tracing"
+printf 'The effective UID/GID switch around each user pass may be too short to observe above.\n'
+printf 'HTCondor keyring setup briefly switches back to the daemon identity before returning to the user.\n'
+printf 'Run as a sufficiently privileged user:\n'
+printf '  strace -ff -e trace=setuid,setreuid,setresuid,setgid,setregid,setresgid,setgroups,mkdir,openat -p %q\n' "$pid"

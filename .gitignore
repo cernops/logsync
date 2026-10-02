@@ -1,0 +1,32 @@
+# Python bytecode and caches
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.pyright
+.ruff_cache
+.cache
+
+# Build and packaging output
+build
+dist
+*.egg-info
+*.tgz
+
+# Coverage and test artifacts
+.coverage
+coverage.xml
+htmlcov
+
+# Local environments and machine-specific config
+.env
+.env.*
+.venv
+venv
+.vscode
+.codex
+
+# Editor noise
+.idea
+*.swp
+*.swo

@@ -1,0 +1,7 @@
+[tool.basedpyright]
+include = ["src"]
+pythonVersion = "3.11"
+
+[[tool.basedpyright.executionEnvironments]]
+root = "."
+extraPaths = ["src"]

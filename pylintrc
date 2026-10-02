@@ -1,0 +1,29 @@
+
+[MESSAGES CONTROL]
+disable=
+    broad-exception-caught,                         # TODO: reconsider
+    consider-using-in,                              # sometimes `x == a or x == b` is preferable to `x in (a, b)`
+    invalid-name,                                   # enforces uppercase module-level vars (constants), but we use some non-constants
+    logging-fstring-interpolation,                  # we prefer `log(f"this value: {myvar}")` to `log("this value: %s", myvar)`, despite the perf overhead
+    missing-class-docstring,                        # we don't want to litter all classes with docstrings
+    no-else-break,                                  # often it makes sense
+    no-else-raise,                                  # often it makes sense
+    no-else-return,                                 # often it makes sense
+    too-few-public-methods,                         # we can intentionally have classes with tiny public API
+    too-many-arguments,                             # it's fine
+    too-many-boolean-expressions,                   # it's fine
+    too-many-branches,                              # it's fine
+    too-many-function-args,                         # it's fine
+    too-many-instance-attributes,                   # it's fine
+    too-many-locals,                                # it's fine
+    too-many-public-methods,                        # it's fine
+    too-many-return-statements,                     # it's fine
+    too-many-statements,                            # it's fine
+    try-except-raise,                               # we use it for logging and re-raising
+    unnecessary-ellipsis,                           # used in Protocol classes
+    unspecified-encoding,                           # well-known default to UTF-8
+    use-implicit-booleaness-not-comparison-to-zero, # many `os` functions make more sense with `== 0`
+    unused-import                                   # pyright does a better job
+
+[FORMAT]
+max-line-length=158 # Should be good enough :)

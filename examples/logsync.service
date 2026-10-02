@@ -1,0 +1,15 @@
+[Unit]
+Description=Drain HTCondor log files to their final destinations
+After=condor.service
+
+[Service]
+RuntimeDirectory=logsync
+SyslogIdentifier=logsync
+ExecStart=/usr/bin/logsync --source-prefix /var/spool/userlogs/ --dest-prefix /somewhere/user/ --dest-prefix /elsewhere/user/ --no-chown --use-effective-identity --htcondor-keyring --interval 5 --metrics-file /run/logsync/metrics.prom --metrics-interval 15
+KillSignal=SIGINT
+TimeoutStopSec=90s
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+#!/usr/bin/python3.14
+"""Command-line launcher for logsync."""
+
+from logsync.cli import main
+
+raise SystemExit(main())
